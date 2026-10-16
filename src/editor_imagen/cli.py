@@ -65,6 +65,55 @@ def unificar(config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de config
 
 
 @app.command()
+def procesar(
+    nombre: str = typer.Option(None, "--nombre", help="Solo fotos cuyo nombre o código contenga este texto"),
+    estado: str = typer.Option(None, "--estado", help="Solo fotos con este estado (pendiente, ok, revisar, error)"),
+    forzar: bool = typer.Option(False, "--forzar", help="Reprocesar aunque ya estén procesadas con el mismo preset"),
+    limite: int = typer.Option(None, "--limite", help="Procesar como máximo N fotos"),
+    config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración"),
+) -> None:
+    """Procesa lo pendiente: quita el fondo y exporta PNG 1080×1080 transparente."""
+    from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeRemainingColumn
+
+    from editor_imagen import batch
+    from editor_imagen.library import inventory
+
+    cfg = load_config(config)
+    texto = nombre.lower() if nombre else None
+
+    def filtro(f: dict) -> bool:
+        if texto and texto not in f["nombre"].lower() and texto not in f["codigo"].lower():
+            return False
+        return not estado or f["estado"] == estado
+
+    with Progress(TextColumn("{task.description}"), BarColumn(), MofNCompleteColumn(), TimeRemainingColumn(), console=console) as prog:
+        tarea = prog.add_task("Cargando modelo…", total=None)
+
+        def avance(i: int, total: int, actual: str) -> None:
+            prog.update(tarea, completed=i, total=total, description=f"Procesando {actual[:40]:<40}")
+
+        try:
+            res = batch.procesar(cfg, filtro, forzar, limite, avance)
+        except inventory.InventarioBloqueado as e:
+            console.print(f"[red]{e}[/]")
+            raise typer.Exit(1)
+        prog.update(tarea, completed=res.candidatas, total=max(res.candidatas, 1), description="Listo")
+
+    t = Table("", "", show_header=False)
+    t.add_row("Procesadas", f"[bold]{res.candidatas}[/]")
+    t.add_row("  ok", f"[green]{res.por_estado['ok']}[/]")
+    t.add_row("  revisar", f"[yellow]{res.por_estado['revisar']}[/] (copias en _revisar)")
+    t.add_row("  error", f"[red]{res.por_estado['error']}[/]" if res.por_estado["error"] else "0")
+    if res.salteadas:
+        t.add_row("Ya procesadas (salteadas)", f"{res.salteadas} (usar --forzar para repetir)")
+    if res.candidatas:
+        t.add_row("Tiempo", f"{res.segundos:.0f} s ({res.segundos / res.candidatas:.2f} s por foto)")
+    console.print(t)
+    console.print(f"Salida: {cfg.biblioteca / 'procesadas'}")
+    console.print(f"Reporte: {res.reporte}")
+
+
+@app.command()
 def estado(config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración")) -> None:
     """Total, únicas, duplicados, pendientes, a revisar."""
     from editor_imagen.library.unify import estado as _estado

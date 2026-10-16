@@ -8,6 +8,7 @@ dedup:
 proceso:
   segmentacion:
     modelo: birefnet           # birefnet | rembg-isnet
+    usar_transparencia_existente: true   # fotos que ya vienen sin fondo: se respeta su recorte
     quitar_sombra: true
     refinar_bordes: true
   restauracion:

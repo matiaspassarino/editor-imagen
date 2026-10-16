@@ -5,7 +5,7 @@
 | Versión | 0.5 |
 | Fecha | 2026-10-16 |
 | Autor | Matías Passa |
-| Estado | F0 y F1 implementadas |
+| Estado | F0, F1 y F2 implementadas |
 
 ### Historial
 | Versión | Cambios |
@@ -141,7 +141,8 @@ No se intenta adivinar el código desde el nombre: los nombres reales son demasi
 | `parecidas` | Nombres de otras filas casi idénticas que no se fusionaron (variantes, misma foto para otro código) |
 | `nombre_generico` | sí/no |
 | `estado` | pendiente / ok / revisar / error |
-| `procesado_con` | Versión del preset usada |
+| `procesado_con` | Versión del preset usada (programa + hash de los ajustes de `proceso`; si cambian, la foto vuelve a procesarse) |
+| `salida` | Archivos generados en `procesadas/` (uno por código). Si cambia el código, la salida anterior se borra |
 | `advertencias` | Resultado del control de calidad |
 
 ### 6.4 Vinculación con productos (diferida)
@@ -199,7 +200,7 @@ Carga → Restauración → Upscale (si hace falta) → Segmentación → Refina
 1. **Carga y normalización** — orientación EXIF, sRGB, rechazo de archivos corruptos. Fotos grandes (celular) se reducen a tamaño de trabajo (~2048 px).
 2. **Restauración** — artefactos JPEG y ruido, antes de agrandar.
 3. **Upscale (condicional)** — si el producto recortado no llega a ~1040 px de lado mayor (1080 menos el margen). Modo `conservative` por defecto.
-4. **Segmentación** — máscara alfa. Se trabaja a mayor resolución que la salida para captar mejor las patas finas.
+4. **Segmentación** — máscara alfa. Se trabaja a mayor resolución que la salida para captar mejor las patas finas. Si la foto ya trae transparencia confiable (no es un rectángulo blanco con esquinas transparentes), se usa esa (`usar_transparencia_existente`).
 5. **Refinado de máscara** — componente principal + piezas cercanas (patas separadas por reflejos); eliminación de sombra de contacto; matting de bordes y decontaminación de color (sin halo blanco).
 6. **Mejora** — balance de blancos, exposición/contraste y nitidez suaves.
 7. **Encuadre** — recorte al producto, escalado para que el lado mayor ocupe el 92 % del lienzo, centrado en 1080×1080 transparente.
@@ -340,15 +341,18 @@ C:\imagenes editadas\
 ```
 editor unificar                  # escanea fuentes + entrada, copia, actualiza inventario
 editor estado                    # total, únicas, duplicados, pendientes, a revisar
-editor procesar                  # procesa lo pendiente
+editor procesar                  # procesa lo pendiente (saltea lo ya hecho con el mismo preset)
 editor procesar --nombre conector --forzar
+editor procesar --estado revisar --forzar
+editor procesar --limite 40      # prueba rápida
 editor check                     # GPU, modelos, configuración
 ```
 
 ## 14. Errores y reporte
 
 - Cada imagen se procesa aislada; un fallo se registra y el lote sigue.
-- Falta de memoria GPU → reintento con tiles más chicos; si falla, CPU.
+- Falta de memoria GPU → se libera caché y se reintenta una vez (F2); tiles más chicos y CPU quedan para F3 si hiciera falta.
+- El inventario se guarda cada 20 imágenes: si el lote se corta, al relanzarlo sigue desde ahí.
 - Reporte por lote en `reportes/`: `id, nombre, estado, tiempo_ms, resolucion_origen, upscale_factor, advertencias, error`.
 - El estado de cada foto se guarda en el inventario (permite reanudar).
 
@@ -389,6 +393,11 @@ Ninguna bloqueante.
 
 ### Resultado F1 (2026-10-16)
 Fuente: `C:\Users\Usuario Ventas\Desktop\FOTOS PRODCUTOS` — 999 imágenes → **963 únicas** (8 copias exactas, 28 casi idénticas fusionadas), 88 con parecidas, 24 nombres genéricos, 315 ya transparentes, 0 errores. Unificar tarda ~75 s la primera vez.
+
+### Resultado F2 (2026-10-16)
+963 fotos procesadas en ~7,5 min (0,47 s/foto, RTX 3070 Ti): **898 ok, 64 a revisar, 1 error** (`Obsidian-background1`, un fondo sin producto). 308 usaron su transparencia original, 614 BiRefNet. En muestras al azar las patas finas, cables y fondos negros/grises salen bien y sin halo.
+- "Varias piezas grandes" quedó como advertencia **informativa** (no manda a revisar): en el catálogo muchas fotos muestran varios productos a propósito (112 casos, todos bien recortados).
+- Mandan a revisar: producto que toca el borde de la foto (cables y patas cortados en el original), máscara vacía/llena, upscale > 4x.
 
 ### Decisiones cerradas
 | Tema | Decisión |
