@@ -1,0 +1,24 @@
+# config.yaml — ver docs/SDD.md §12
+biblioteca: "C:/imagenes editadas"
+fuentes: []                    # carpetas a unificar (se completan en F1)
+dedup:
+  phash_umbral: 4
+
+proceso:
+  segmentacion:
+    modelo: birefnet           # birefnet | rembg-isnet
+    quitar_sombra: true
+    refinar_bordes: true
+  restauracion:
+    artefactos_jpeg: true
+    ruido: 0.3
+  upscale:
+    modo: conservative         # conservative | standard | off
+  mejora:
+    balance_blancos: true
+    contraste: 0.3
+    nitidez: 0.3
+  salida:
+    tamano: 1080
+    margen: 0.04
+    dpi: 300
