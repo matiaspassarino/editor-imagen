@@ -114,6 +114,18 @@ def procesar(
 
 
 @app.command()
+def revisar(
+    puerto: int = typer.Option(7860, help="Puerto local"),
+    config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración"),
+) -> None:
+    """Abre la pantalla de revisión en el navegador (antes/después, editar, reprocesar)."""
+    from editor_imagen.ui.app import lanzar
+
+    console.print(f"Abriendo http://127.0.0.1:{puerto} — cerrá esta ventana (o Ctrl+C) para terminar.")
+    lanzar(load_config(config), puerto)
+
+
+@app.command()
 def estado(config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración")) -> None:
     """Total, únicas, duplicados, pendientes, a revisar."""
     from editor_imagen.library.unify import estado as _estado

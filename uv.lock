@@ -202,6 +202,7 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "einops" },
+    { name = "gradio" },
     { name = "huggingface-hub" },
     { name = "imagehash" },
     { name = "kornia" },
@@ -225,9 +226,6 @@ dependencies = [
 rembg = [
     { name = "rembg", extra = ["gpu"] },
 ]
-ui = [
-    { name = "gradio" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -237,7 +235,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "einops" },
-    { name = "gradio", marker = "extra == 'ui'" },
+    { name = "gradio" },
     { name = "huggingface-hub" },
     { name = "imagehash" },
     { name = "kornia" },
@@ -257,7 +255,7 @@ requires-dist = [
     { name = "transformers" },
     { name = "typer" },
 ]
-provides-extras = ["rembg", "ui"]
+provides-extras = ["rembg"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest" }]

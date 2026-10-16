@@ -22,11 +22,11 @@ dependencies = [
     "rich",
     "pydantic",
     "pyyaml",
+    "gradio",
 ]
 
 [project.optional-dependencies]
 rembg = ["rembg[gpu]"]
-ui = ["gradio"]
 
 [dependency-groups]
 dev = ["pytest"]

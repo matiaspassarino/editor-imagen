@@ -1,6 +1,7 @@
 """`editor procesar`: cola, reanudación, nombres de salida, reporte (SDD §10, §14)."""
 
 import csv
+import os
 import shutil
 import time
 from collections import Counter
@@ -72,6 +73,7 @@ def procesar(
     forzar: bool = False,
     limite: int | None = None,
     avance: Callable[[int, int, str], None] | None = None,
+    con_reporte: bool = True,
 ) -> ResumenLote:
     bib = Biblioteca(cfg.biblioteca)
     bib.crear()
@@ -89,9 +91,10 @@ def procesar(
     res.candidatas = len(cola)
 
     bib.reportes.mkdir(exist_ok=True)
-    res.reporte = bib.reportes / f"proceso_{datetime.now():%Y%m%d_%H%M%S}.csv"
+    # Sin reporte (p. ej. reprocesar una foto desde la UI) se escribe a un archivo nulo.
+    res.reporte = bib.reportes / f"proceso_{datetime.now():%Y%m%d_%H%M%S}.csv" if con_reporte else None
     inicio = time.perf_counter()
-    with open(res.reporte, "w", encoding="utf-8-sig", newline="") as frep:
+    with open(res.reporte or os.devnull, "w", encoding="utf-8-sig", newline="") as frep:
         rep = csv.DictWriter(frep, fieldnames=COLUMNAS_REPORTE, delimiter=";")
         rep.writeheader()
         for n, fila in enumerate(cola):

@@ -15,6 +15,7 @@ Todo corre en esta PC (usa la placa de video). No sube nada a internet.
 ```
 editor unificar      ← incorpora las fotos nuevas a la biblioteca
 editor procesar      ← quita el fondo y exporta lo pendiente
+editor revisar       ← abre la pantalla de revisión en el navegador
 editor estado        ← muestra cuántas hay, cuántas faltan, cuántas revisar
 ```
 
@@ -52,6 +53,25 @@ Tiempo de referencia: ~1 segundo por foto. El catálogo completo (~960 fotos) ta
 
 ### Revisar el resultado
 
+La forma más cómoda es la **pantalla de revisión**:
+
+```
+editor revisar
+```
+
+Se abre en el navegador (dirección `http://127.0.0.1:7860`, solo en esta PC). Para cerrarla, cerrá la ventana de la terminal o apretá Ctrl+C.
+
+- **Izquierda:** galería filtrable por estado (arranca en `revisar`), carpeta, texto o "solo sin código". Las que tienen ⚠ están para revisar o con error.
+- **Derecha:** al hacer clic en una foto se ve el original y el resultado. El resultado se puede ver sobre fondo gris, blanco, negro o azul, para detectar bordes o halos.
+- **Código y descripción:** se completan ahí mismo. **Guardar** los anota en el inventario; si cambia el código, la foto se reprocesa sola para renombrar la salida.
+- **Modelo de recorte y ajustes** ("Quitar reflejo", "No rellenar huecos"): elegí y apretá **Reprocesar**. En ~1 segundo se ve el resultado nuevo (la primera vez tarda unos segundos más porque carga los modelos).
+- **Marcar OK:** la foto sale de `revisar` (y de la carpeta `_revisar`).
+- **◀ Anterior / Siguiente ▶** recorre las fotos del filtro actual.
+
+No hace falta cerrar la pantalla para usar Excel, pero **no edites el inventario en Excel mientras la pantalla está guardando**, y cerrá Excel antes de guardar desde la pantalla.
+
+También se puede revisar a mano:
+
 - Todo lo procesado: `C:\imagenes editadas\procesadas`.
 - Lo que conviene mirar: `C:\imagenes editadas\_revisar` (copias de las que tuvieron alguna advertencia; ver sección 5).
 - Cada corrida deja un reporte en `C:\imagenes editadas\reportes`.
@@ -65,6 +85,7 @@ Tiempo de referencia: ~1 segundo por foto. El catálogo completo (~960 fotos) ta
 | `editor unificar` | Escanea las carpetas fuente y `entrada`, copia lo nuevo a la biblioteca y actualiza el inventario |
 | `editor procesar` | Procesa todo lo pendiente |
 | `editor estado` | Resumen: total, pendientes, ok, a revisar, errores, sin código |
+| `editor revisar` | Abre la pantalla de revisión en el navegador (ver sección 2) |
 | `editor check` | Verifica que la placa de video, los modelos y la configuración estén bien |
 
 Opciones de `procesar` (se pueden combinar):
@@ -137,6 +158,8 @@ Estado `error`: la foto no se pudo procesar (archivo dañado, o no se encontró 
 
 ## 6. Si una foto sale mal
 
+Lo más simple es hacerlo desde la pantalla de revisión (`editor revisar`): elegís la foto, cambiás el modelo o tildás un ajuste y apretás **Reprocesar**. Lo mismo se puede hacer desde el inventario:
+
 1. **Probá otro modelo de recorte** para esa foto: en el inventario, columna `modelo`, escribí uno de estos valores, guardá y corré `editor procesar` (se rehace sola):
 
    | Valor | Cuándo probarlo |
@@ -168,6 +191,7 @@ _revisar\       copias de las procesadas con advertencias
 reportes\       un CSV por corrida de procesar
 inventario.csv  la planilla
 .indice.json    datos internos (oculto) — no editar ni borrar
+.miniaturas\    miniaturas de la pantalla de revisión (se regeneran solas)
 ```
 
 ### Proyecto (`C:\Users\Usuario Ventas\Desktop\editor de imagen`)
