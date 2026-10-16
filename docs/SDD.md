@@ -5,7 +5,7 @@
 | Versión | 0.5 |
 | Fecha | 2026-10-16 |
 | Autor | Matías Passa |
-| Estado | F0–F4 implementadas |
+| Estado | F0–F4 cerradas (v1 completa) |
 
 ### Historial
 | Versión | Cambios |
@@ -408,7 +408,7 @@ Ninguna bloqueante.
 Fuente: `C:\Users\Usuario Ventas\Desktop\FOTOS PRODCUTOS` — 999 imágenes → **963 únicas** (8 copias exactas, 28 casi idénticas fusionadas), 88 con parecidas, 24 nombres genéricos, 315 ya transparentes, 0 errores. Unificar tarda ~75 s la primera vez.
 
 ### Resultado F4 (2026-10-16)
-`editor revisar`: Gradio 6 local (127.0.0.1, sin telemetría). Galería paginada (48) con miniaturas en `.miniaturas/`, filtros por estado/carpeta/texto/sin código; detalle original | resultado sobre fondo elegible; edición de código y descripción (si cambia el código se reprocesa para renombrar); modelo y ajustes por casillas; reprocesar una foto (~1 s, sin reporte); marcar OK. La lógica vive en `review.py` (sin dependencia de la UI) y relee el inventario antes de cada escritura. Cola de 1 operación a la vez (inventario y GPU compartidos).
+`editor revisar`: Gradio 6 local (127.0.0.1, sin telemetría). Galería paginada (48) con miniaturas en `.miniaturas/`, filtros por estado/carpeta/texto/sin código; detalle original | resultado sobre fondo elegible; edición de código y descripción (si cambia el código se reprocesa para renombrar); modelo y ajustes por casillas; reprocesar una foto (~1 s, sin reporte); marcar OK. La lógica vive en `review.py` (sin dependencia de la UI) y relee el inventario antes de cada escritura. Cola de 1 operación a la vez (inventario y GPU compartidos). Probada por el usuario: OK. F4 cerrada.
 
 ### Resultado F3 (2026-10-16)
 Segmentación combinada (dynamic ∪ DIS5K), relleno de placas, reflejos por foto, upscale conservative (x2/x4, fp16), mejora de color con el fondo como referencia y enfoque. Catálogo completo: **899 ok, 64 a revisar, 0 errores, 1,1 s/foto** (objetivo ≤ 3 s). Restauración sin modelo aparte y QC por umbral solo informativo (ver §9). **Prueba de impresión OK** (2026-10-16): 12 casos difíciles en las 4 medidas de card (`scripts/prueba_impresion.py`). F3 cerrada.
