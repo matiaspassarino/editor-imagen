@@ -21,6 +21,68 @@ def main() -> None:
 
 
 @app.command()
+def unificar(config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración")) -> None:
+    """Escanea fuentes + entrada, copia a la biblioteca y actualiza el inventario."""
+    from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeRemainingColumn
+
+    from editor_imagen.library import inventory
+    from editor_imagen.library.unify import unificar as _unificar
+
+    cfg = load_config(config)
+    if not cfg.fuentes:
+        console.print("[yellow]No hay fuentes en config.yaml; solo se escanea la carpeta entrada.[/]")
+
+    with Progress(TextColumn("{task.description}"), BarColumn(), MofNCompleteColumn(), TimeRemainingColumn(), console=console) as prog:
+        tarea = prog.add_task("Analizando", total=None)
+
+        def avance(i: int, total: int, ruta: Path) -> None:
+            prog.update(tarea, completed=i + 1, total=total, description=f"Analizando {ruta.name[:40]:<40}")
+
+        try:
+            res = _unificar(cfg, avance)
+        except inventory.InventarioBloqueado as e:
+            console.print(f"[red]{e}[/]")
+            raise typer.Exit(1)
+
+    t = Table("", "", show_header=False)
+    t.add_row("Archivos escaneados", str(res.archivos))
+    if res.ignorados:
+        t.add_row("Ignorados (no imagen)", ", ".join(f"{e} ×{n}" for e, n in res.ignorados.most_common()))
+    t.add_row("Fotos únicas en biblioteca", f"[bold]{res.unicas}[/]")
+    t.add_row("  nuevas en esta corrida", str(res.nuevas))
+    if res.reemplazadas:
+        t.add_row("  reemplazadas por mayor resolución", str(res.reemplazadas))
+    t.add_row("Copias exactas descartadas", str(res.copias_exactas))
+    t.add_row("Casi idénticas fusionadas", str(res.casi_identicas))
+    t.add_row("Con parecidas sin fusionar", f"{res.con_parecidas} (ver columna 'parecidas')")
+    t.add_row("Nombres genéricos", str(res.genericos))
+    t.add_row("Ya transparentes", str(res.transparentes))
+    t.add_row("Errores", f"[red]{len(res.errores)}[/]" if res.errores else "0")
+    console.print(t)
+    for ruta, err in res.errores:
+        console.print(f"  [red]✗[/] {ruta}: {err}")
+    console.print(f"Inventario: {cfg.biblioteca / 'inventario.csv'}")
+
+
+@app.command()
+def estado(config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración")) -> None:
+    """Total, únicas, duplicados, pendientes, a revisar."""
+    from editor_imagen.library.unify import estado as _estado
+
+    e = _estado(load_config(config))
+    t = Table("", "", show_header=False)
+    t.add_row("Fotos únicas", f"[bold]{e.total}[/]")
+    for nombre in ("pendiente", "ok", "revisar", "error"):
+        t.add_row(f"  {nombre}", str(e.por_estado.get(nombre, 0)))
+    t.add_row("Copias descartadas (duplicadas)", str(e.copias))
+    t.add_row("Con parecidas sin fusionar", str(e.con_parecidas))
+    t.add_row("Sin código", str(e.sin_codigo))
+    t.add_row("  con nombre genérico", str(e.genericos))
+    t.add_row("Ya transparentes", str(e.transparentes))
+    console.print(t)
+
+
+@app.command()
 def check(
     config: Path = typer.Option(DEFAULT_CONFIG, help="Archivo de configuración"),
     sin_modelos: bool = typer.Option(False, "--sin-modelos", help="No descargar ni probar modelos"),

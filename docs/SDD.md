@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.4 |
-| Fecha | 2026-10-15 |
+| Versión | 0.5 |
+| Fecha | 2026-10-16 |
 | Autor | Matías Passa |
-| Estado | Listo para iniciar desarrollo |
+| Estado | F0 y F1 implementadas |
 
 ### Historial
 | Versión | Cambios |
@@ -14,6 +14,7 @@
 | 0.2 | Destinos, tipo de producto, volumen, origen de fotos |
 | 0.3 | Medidas de cards, módulo Biblioteca |
 | 0.4 | **Simplificación:** una única salida (PNG 1080×1080 transparente, 300 DPI). Se descarta la detección automática de SKU por regex (los nombres reales no siguen un patrón); se reemplaza por inventario editable. Biblioteca en `C:\imagenes editadas`. Vinculación con códigos diferida al módulo de productos del CRM de Industrias Sur |
+| 0.5 | F1 contra las fotos reales: el pHash no distingue variantes de color ni la misma foto usada para varios códigos → las casi idénticas solo se fusionan si el nombre es compatible; las demás se vinculan en `parecidas`. Columnas nuevas `carpeta`, `transparente`, `copias`, `parecidas`. Inventario con `;` y UTF-8 BOM para Excel |
 
 ---
 
@@ -103,9 +104,14 @@ carpetas dispersas ──► escaneo ──► hash (exacto + perceptual) ──
 1. **Escaneo** recursivo de las carpetas indicadas (JPG, JPEG, PNG, WEBP, HEIC, BMP, TIFF).
 2. **Hash exacto** (SHA-256) → archivos idénticos.
    **Hash perceptual** (pHash) → misma foto con otra compresión o tamaño.
-3. **Agrupación:** en cada grupo se elige como representante la de mayor resolución; las demás quedan registradas como duplicados.
-4. **Copia** de las representantes a `originales/` con nombre saneado. Los originales nunca se mueven ni se modifican.
-5. **Inventario** (`inventario.csv`, abrible en Excel).
+3. **Agrupación:**
+   - Copias exactas (mismo SHA-256) → siempre se fusionan.
+   - Casi idénticas (pHash ≤ umbral y misma proporción) → se fusionan **solo si el nombre es compatible**: mismo nombre normalizado (ignorando ` (2)` y ` - copia`) o alguno genérico. Si no (`3276-BL` / `3276-O`, `3202` / `3203`), quedan separadas y vinculadas en la columna `parecidas`. Motivo: el pHash trabaja en grises y no ve variantes de color; tampoco un filtro de color sirvió (en las fotos reales el producto ocupa poco del cuadro).
+   - Dos fotos que ya están en la biblioteca nunca se fusionan, para no perder datos cargados a mano.
+   - Representante: la de mayor resolución. Nombre: el más útil del grupo (no genérico, sin sufijo de copia).
+   - Si en una corrida posterior aparece una versión de mayor resolución, reemplaza la copia en `originales/` y la foto vuelve a `pendiente`.
+4. **Copia** de las representantes a `originales/` con nombre saneado. Los originales nunca se mueven ni se modifican. Nunca se pisa un archivo existente en `originales/`.
+5. **Inventario** (`inventario.csv`, abrible en Excel) e índice interno `.indice.json` (hashes y grupos; caché por tamaño + fecha para no releer archivos sin cambios).
 
 ### 6.2 Nombres
 
@@ -122,14 +128,17 @@ No se intenta adivinar el código desde el nombre: los nombres reales son demasi
 
 | Columna | Descripción |
 |---|---|
-| `id` | Identificador interno estable (derivado del hash) |
+| `id` | Identificador interno estable: `i` + 11 caracteres del SHA-256 (la `i` evita que Excel lo tome como número) |
 | `nombre` | Nombre saneado en la biblioteca |
 | `codigo` | Código interno de producto (editable; vacío al inicio) |
 | `descripcion` | Libre (editable) |
-| `ruta_original` | De dónde vino |
+| `carpeta` | Subcarpeta de origen (en las fotos reales equivale a la categoría) |
+| `ruta_original` | De dónde vino la representante |
 | `ancho`, `alto` | Resolución original |
-| `grupo` | Grupo de duplicados |
-| `duplicados` | Otras rutas con la misma foto |
+| `transparente` | sí/no: la foto ya tiene fondo transparente |
+| `copias` | Cantidad de archivos fusionados en esta fila |
+| `duplicados` | Otras rutas fusionadas (copias exactas y casi idénticas), separadas por ` \| ` |
+| `parecidas` | Nombres de otras filas casi idénticas que no se fusionaron (variantes, misma foto para otro código) |
 | `nombre_generico` | sí/no |
 | `estado` | pendiente / ok / revisar / error |
 | `procesado_con` | Versión del preset usada |
@@ -321,7 +330,8 @@ C:\imagenes editadas\
 ├── originales\       copias de las fotos fuente (una por grupo de duplicados)
 ├── procesadas\       PNG 1080×1080 transparentes
 ├── _revisar\         copias de las procesadas con advertencias
-├── inventario.csv
+├── inventario.csv    separador ; y UTF-8 con BOM (Excel en español)
+├── .indice.json      estado interno, no editar
 └── reportes\
 ```
 
@@ -375,7 +385,10 @@ editor check                     # GPU, modelos, configuración
 
 ## 18. Preguntas abiertas
 
-Ninguna bloqueante. Pendiente para F1: rutas de las carpetas donde están hoy las fotos.
+Ninguna bloqueante.
+
+### Resultado F1 (2026-10-16)
+Fuente: `C:\Users\Usuario Ventas\Desktop\FOTOS PRODCUTOS` — 999 imágenes → **963 únicas** (8 copias exactas, 28 casi idénticas fusionadas), 88 con parecidas, 24 nombres genéricos, 315 ya transparentes, 0 errores. Unificar tarda ~75 s la primera vez.
 
 ### Decisiones cerradas
 | Tema | Decisión |

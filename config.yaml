@@ -1,6 +1,7 @@
 # config.yaml — ver docs/SDD.md §12
 biblioteca: "C:/imagenes editadas"
-fuentes: []                    # carpetas a unificar (se completan en F1)
+fuentes:                       # carpetas a unificar (recursivo)
+  - "C:/Users/Usuario Ventas/Desktop/FOTOS PRODCUTOS"
 dedup:
   phash_umbral: 4
 
