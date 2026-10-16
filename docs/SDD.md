@@ -5,7 +5,7 @@
 | Versión | 0.5 |
 | Fecha | 2026-10-16 |
 | Autor | Matías Passa |
-| Estado | F0–F3 implementadas (F3: falta prueba de impresión) |
+| Estado | F0–F3 cerradas; próximo F4 (UI de revisión) |
 
 ### Historial
 | Versión | Cambios |
@@ -408,7 +408,7 @@ Ninguna bloqueante.
 Fuente: `C:\Users\Usuario Ventas\Desktop\FOTOS PRODCUTOS` — 999 imágenes → **963 únicas** (8 copias exactas, 28 casi idénticas fusionadas), 88 con parecidas, 24 nombres genéricos, 315 ya transparentes, 0 errores. Unificar tarda ~75 s la primera vez.
 
 ### Resultado F3 (2026-10-16)
-Segmentación combinada (dynamic ∪ DIS5K), relleno de placas, reflejos por foto, upscale conservative (x2/x4, fp16), mejora de color con el fondo como referencia y enfoque. Catálogo completo: **899 ok, 64 a revisar, 0 errores, 1,1 s/foto** (objetivo ≤ 3 s). Restauración sin modelo aparte y QC por umbral solo informativo (ver §9). Pendiente: prueba de impresión en las 4 medidas de card (§15) y set de referencia formal.
+Segmentación combinada (dynamic ∪ DIS5K), relleno de placas, reflejos por foto, upscale conservative (x2/x4, fp16), mejora de color con el fondo como referencia y enfoque. Catálogo completo: **899 ok, 64 a revisar, 0 errores, 1,1 s/foto** (objetivo ≤ 3 s). Restauración sin modelo aparte y QC por umbral solo informativo (ver §9). **Prueba de impresión OK** (2026-10-16): 12 casos difíciles en las 4 medidas de card (`scripts/prueba_impresion.py`). F3 cerrada.
 
 ### Resultado F2 (2026-10-16)
 963 fotos procesadas en ~7,5 min (0,47 s/foto, RTX 3070 Ti): **898 ok, 64 a revisar, 1 error** (`Obsidian-background1`, un fondo sin producto). 308 usaron su transparencia original, 614 BiRefNet. En muestras al azar las patas finas, cables y fondos negros/grises salen bien y sin halo.
