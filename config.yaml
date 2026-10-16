@@ -9,6 +9,8 @@ proceso:
   segmentacion:
     modelo: combinado          # combinado (dynamic + dis) | birefnet | birefnet-dynamic | birefnet-dis
     usar_transparencia_existente: true   # fotos que ya vienen sin fondo: se respeta su recorte
+    quitar_reflejo: false      # para todas: da falsos positivos. Mejor por foto: `reflejo` en la columna ajustes
+    rellenar_placas: true      # huecos con piezas adentro (placa blanca con LEDs) se rellenan
     quitar_sombra: true
     refinar_bordes: true
   restauracion:

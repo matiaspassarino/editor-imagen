@@ -7,7 +7,7 @@ from editor_imagen.steps import Contexto
 UPSCALE_MAX = 4.0
 # Advertencias que se anotan pero no mandan la foto a revisar: en el catálogo real muchas fotos
 # muestran varios productos a propósito y el recorte sale bien igual.
-INFORMATIVAS = ("piezas grandes separadas",)
+INFORMATIVAS = ("piezas grandes separadas", "reflejo quitado", "huecos rellenados")
 
 
 def requiere_revision(advertencias: list[str]) -> bool:
@@ -27,6 +27,10 @@ def controlar(ctx: Contexto) -> list[str]:
         adv.append("producto toca el borde de la foto (posible recorte)")
     if ctx.piezas_grandes > 1:
         adv.append(f"{ctx.piezas_grandes} piezas grandes separadas")
+    if ctx.reflejo_quitado:
+        adv.append("reflejo quitado")
+    if ctx.huecos_rellenos:
+        adv.append(f"huecos rellenados ({ctx.huecos_rellenos}, placa con componentes)")
     if ctx.factor_escala > UPSCALE_MAX:
         adv.append(f"foto de origen chica: necesita agrandarse x{ctx.factor_escala:.1f}")
     return adv

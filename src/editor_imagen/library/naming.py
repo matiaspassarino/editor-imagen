@@ -12,7 +12,7 @@ LARGO_MAX = 100
 _GENERICOS = re.compile(
     r"""^(
         whatsapp[\s_-]image | captura[\s_-]de[\s_-]pantalla | screenshot | screen[\s_-]shot
-      | sin[\s_-]t[ií]tulo | untitled | gemini[\s_-]generated[\s_-]image | chatgpt[\s_-]image
+      | sin[\s_-]t[ií]tulo | untitled | gemini[\s_-]generated[\s_-]image | chatgpt[\s_-]image | firefly[\s_-]
       | img[\s_-]?\d | dsc[n_]?\d | pxl[\s_-]\d | photo[\s_-]?\d | descarga | download
       | (image|imagen|foto|images)[\s_-]?\d*$
       | D_N[QP]_N?P?_  # descargas de MercadoLibre

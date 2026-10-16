@@ -30,6 +30,43 @@ def _componentes(alfa: np.ndarray) -> np.ndarray:
     return conservar[etiquetas]
 
 
+def rellenar_huecos_con_piezas(alfa: np.ndarray) -> tuple[np.ndarray, int]:
+    """Rellena los huecos de la máscara que tienen piezas adentro.
+
+    Una placa blanca con LEDs sobre fondo blanco suele salir como un anillo con LEDs sueltos en el medio: el
+    "hueco" no es fondo, es la placa. Un hueco real (ojo de un terminal, centro de un rollo de cable, un marco)
+    no tiene nada adentro y no se toca.
+    """
+    binaria = (alfa >= 0.5).astype(np.uint8)
+    contornos, jerarquia = cv2.findContours(binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if jerarquia is None:
+        return alfa, 0
+    jerarquia = jerarquia[0]  # [siguiente, anterior, primer_hijo, padre]
+
+    def profundidad(i: int) -> int:
+        d = 0
+        while jerarquia[i][3] >= 0:
+            i, d = jerarquia[i][3], d + 1
+        return d
+
+    rellenar = []
+    for i, c in enumerate(contornos):
+        if profundidad(i) % 2 == 0 or jerarquia[i][2] < 0:
+            continue  # contorno exterior, o hueco sin nada adentro
+        area_hueco = cv2.contourArea(c)
+        hijo, area_piezas = jerarquia[i][2], 0.0
+        while hijo >= 0:
+            area_piezas += cv2.contourArea(contornos[hijo])
+            hijo = jerarquia[hijo][0]
+        if area_hueco > 0 and area_piezas >= 0.01 * area_hueco:
+            rellenar.append(c)
+    if not rellenar:
+        return alfa, 0
+    zona = np.zeros_like(binaria)
+    cv2.drawContours(zona, rellenar, -1, 1, thickness=cv2.FILLED)
+    return np.maximum(alfa, zona.astype(np.float32)), len(rellenar)
+
+
 def _fondo(rgb: np.ndarray, alfa: np.ndarray) -> np.ndarray:
     fondo = alfa < 0.02
     if fondo.sum() < 100:
@@ -55,6 +92,8 @@ def refinar(ctx: Contexto, cfg: Segmentacion) -> None:
     cerca = cv2.dilate(piezas.astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radio + 1,) * 2)).astype(bool)
     a = np.where(cerca, a, 0)
     a = np.where(piezas | (a < 0.5), a, 0)  # piezas sólidas descartadas
+    if cfg.rellenar_placas and ctx.segmentacion != "transparencia original":
+        a, ctx.huecos_rellenos = rellenar_huecos_con_piezas(a)
     ctx.alfa = a.astype(np.float32)
 
     # Decontaminación: en los píxeles semitransparentes se resta el color del fondo (quita el halo blanco).

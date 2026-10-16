@@ -104,15 +104,34 @@ def procesar(
     return res
 
 
+# Palabras de la columna `ajustes` → cambio sobre `proceso.segmentacion`.
+AJUSTES = {
+    "reflejo": {"quitar_reflejo": True},
+    "sin-reflejo": {"quitar_reflejo": False},
+    "relleno": {"rellenar_placas": True},
+    "sin-relleno": {"rellenar_placas": False},
+}
+
+
 def _proceso(cfg: Config, fila: dict) -> Proceso:
-    """Ajustes para esta foto: los de config.yaml, con el modelo de la columna `modelo` si tiene uno."""
-    modelo = fila["modelo"].strip().lower()
-    if not modelo:
+    """Ajustes para esta foto: los de config.yaml, con las columnas `modelo` y `ajustes` aplicadas encima."""
+    cambios: dict = {}
+    modelo = fila.get("modelo", "").strip().lower()
+    if modelo:
+        validos = get_args(Segmentacion.model_fields["modelo"].annotation)
+        if modelo not in validos:
+            raise ValueError(f"modelo '{fila['modelo']}' no válido; opciones: {', '.join(validos)}")
+        cambios["modelo"] = modelo
+    for palabra in fila.get("ajustes", "").replace(";", ",").split(","):
+        palabra = palabra.strip().lower()
+        if not palabra:
+            continue
+        if palabra not in AJUSTES:
+            raise ValueError(f"ajuste '{palabra}' no válido; opciones: {', '.join(AJUSTES)}")
+        cambios.update(AJUSTES[palabra])
+    if not cambios:
         return cfg.proceso
-    validos = get_args(Segmentacion.model_fields["modelo"].annotation)
-    if modelo not in validos:
-        raise ValueError(f"modelo '{fila['modelo']}' no válido; opciones: {', '.join(validos)}")
-    seg = cfg.proceso.segmentacion.model_copy(update={"modelo": modelo})
+    seg = cfg.proceso.segmentacion.model_copy(update=cambios)
     return cfg.proceso.model_copy(update={"segmentacion": seg})
 
 

@@ -118,6 +118,15 @@ def test_columna_modelo_cambia_el_preset_y_valida(tmp_path):
     assert cfg.proceso.segmentacion.modelo == "combinado"  # no modifica la configuración global
 
 
+def test_columna_ajustes(tmp_path):
+    cfg = Config(biblioteca=tmp_path)
+    assert not cfg.proceso.segmentacion.quitar_reflejo
+    p = batch._proceso(cfg, {"modelo": "", "ajustes": "Reflejo, sin-relleno"})
+    assert p.segmentacion.quitar_reflejo and not p.segmentacion.rellenar_placas
+    assert batch._preset(cfg, {"modelo": "", "ajustes": "reflejo"}) != batch._preset(cfg, {"modelo": "", "ajustes": ""})
+    assert batch._preset(cfg, {"modelo": "", "ajustes": "cualquiera"}) == ""
+
+
 def test_error_en_una_imagen_no_frena_el_lote(tmp_path):
     fuente = tmp_path / "FOTOS"
     producto_transparente(fuente / "bien.png")

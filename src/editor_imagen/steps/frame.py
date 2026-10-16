@@ -4,10 +4,10 @@ import numpy as np
 
 from editor_imagen.config import Salida
 from editor_imagen.imaging import bbox, redimensionar
-from editor_imagen.steps import Contexto
+from editor_imagen.steps import Contexto, upscale
 
 
-def encuadrar(ctx: Contexto, cfg: Salida) -> tuple[np.ndarray, np.ndarray]:
+def encuadrar(ctx: Contexto, cfg: Salida, modo_upscale: str = "off") -> tuple[np.ndarray, np.ndarray]:
     """Devuelve (rgb, alfa) de `tamano × tamano`."""
     caja = bbox(ctx.alfa)
     if caja is None:
@@ -21,6 +21,7 @@ def encuadrar(ctx: Contexto, cfg: Salida) -> tuple[np.ndarray, np.ndarray]:
     # Respecto de la foto original (la de trabajo puede estar reducida a 2048 px).
     ctx.factor_escala = escala * max(ctx.resolucion_origen) / max(ctx.rgb.shape[:2])
     nuevo_ancho, nuevo_alto = max(1, round(ancho * escala)), max(1, round(alto * escala))
+    rgb, alfa, ctx.upscale_modelo = upscale.agrandar(rgb, alfa, escala, modo_upscale)
     rgb, alfa = redimensionar(rgb, alfa, nuevo_ancho, nuevo_alto)
 
     lienzo_rgb = np.zeros((cfg.tamano, cfg.tamano, 3), np.float32)

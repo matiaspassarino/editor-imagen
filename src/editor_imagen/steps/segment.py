@@ -62,6 +62,10 @@ def segmentar(ctx: Contexto, cfg: Segmentacion) -> None:
         ctx.alfa_original = None
     if cfg.modelo == "combinado":
         ctx.alfa = _combinado(ctx.rgb).astype(np.float32)
+        if cfg.quitar_reflejo:
+            # El modelo general suele excluir el reflejo que los otros dos incluyen: su borde inferior marca
+            # la línea de apoyo candidata (ver steps/reflection.py). Solo se corre si hace falta.
+            ctx.alfa_referencia = _birefnet(ctx.rgb, "birefnet").astype(np.float32)
     elif cfg.modelo.startswith("birefnet"):
         ctx.alfa = _birefnet(ctx.rgb, cfg.modelo).astype(np.float32)
     else:
