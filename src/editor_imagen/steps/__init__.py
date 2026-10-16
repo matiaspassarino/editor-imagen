@@ -14,6 +14,9 @@ class Contexto:
     resolucion_origen: tuple[int, int] = (0, 0)  # ancho, alto
     factor_escala: float = 1.0
     upscale_modelo: bool = False  # si el agrandado usó Real-ESRGAN
+    mejora_color: bool = False  # si se corrigió balance de blancos/exposición con el fondo
+    mejora_exposicion: float = 1.0
+    discrepancia: float | None = None  # QC: 1 − IoU entre el modelo y una detección simple del fondo
     segmentacion: str = ""  # modelo usado o "transparencia original"
     advertencias: list[str] = field(default_factory=list)
     piezas_grandes: int = 0

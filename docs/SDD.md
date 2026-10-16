@@ -5,7 +5,7 @@
 | Versión | 0.5 |
 | Fecha | 2026-10-16 |
 | Autor | Matías Passa |
-| Estado | F0, F1 y F2 implementadas |
+| Estado | F0–F3 implementadas (F3: falta prueba de impresión) |
 
 ### Historial
 | Versión | Cambios |
@@ -200,8 +200,8 @@ Carga → Restauración → Upscale (si hace falta) → Segmentación → Refina
 ```
 
 1. **Carga y normalización** — orientación EXIF, sRGB, rechazo de archivos corruptos. Fotos grandes (celular) se reducen a tamaño de trabajo (~2048 px).
-2. **Restauración** — artefactos JPEG y ruido, antes de agrandar.
-3. **Upscale (condicional)** — si el producto recortado no llega a ~1040 px de lado mayor (1080 menos el margen). Modo `conservative` por defecto. Implementado dentro del encuadre, solo sobre el recorte del producto y si el factor es ≥ 1,15: Real-ESRGAN x4plus por bloques de 512 px; `conservative` mezcla 50/50 con Lanczos; el alfa siempre con Lanczos. Comparado en fotos x3–x10: `conservative` da textos nítidos sin la textura "pintada" que `standard` agrega en JPEG muy comprimidos.
+2. **Restauración** — artefactos JPEG y ruido. **Decisión (F3): sin modelo aparte.** Real-ESRGAN ya está entrenado con compresión y ruido y se aplica justo a las fotos chicas, que son las afectadas; las grandes se reducen a 1080 y los artefactos desaparecen al reducir. Un modelo extra sumaría tiempo sin mejora visible.
+3. **Upscale (condicional)** — si el producto recortado no llega a ~1040 px de lado mayor (1080 menos el margen). Modo `conservative` por defecto. Implementado dentro del encuadre, solo sobre el recorte del producto y si el factor es ≥ 1,15: Real-ESRGAN x4plus por bloques de 512 px; `conservative` mezcla 50/50 con Lanczos; el alfa siempre con Lanczos. Comparado en fotos x3–x10: `conservative` da textos nítidos sin la textura "pintada" que `standard` agrega en JPEG muy comprimidos. Velocidad: x2plus si el factor ≤ 2 (lo más común) y x4plus si no, en fp16, y la entrada se reduce para que la salida del modelo tenga justo el tamaño final: de 2,4 a 1,0 s/foto sin diferencia visible.
 4. **Segmentación** — máscara alfa. Se trabaja a mayor resolución que la salida para captar mejor las patas finas. Si la foto ya trae transparencia confiable (no es un rectángulo blanco con esquinas transparentes), se usa esa (`usar_transparencia_existente`).
    **4.1 Elección del modelo (2026-10-16).** Con 8 fotos reportadas (carcasas blancas, placas blancas con LEDs, reflejos, blísters) se compararon 4 variantes:
 
@@ -215,13 +215,13 @@ Carga → Restauración → Upscale (si hace falta) → Segmentación → Refina
    La **unión** dynamic ∪ DIS5K corrigió 8/8 y en 32 fotos al azar empeoró 1 (sumó el reflejo del producto en la mesa, lo aporta dynamic). Limitar los agregados de DIS5K a la envolvente del producto se probó y se descartó: recorta el borde de las placas. Para los casos puntuales está la columna `modelo` del inventario. Costo: ~0,45 s de GPU por foto, ~3 GB VRAM.
    **4.2 Reflejos en la superficie de apoyo** (`quitar_reflejo`, **por foto** con `ajustes = reflejo`). Aplicado a todo el catálogo acertó 7 y cortó mal 11 (dos filas de productos, mangos de pinzas, lazos de cable, pilas de placas), así que queda desactivado por defecto. Casos reales: renders de IA de cajas de cable UTP "con reflejo en la base" y fotos sobre acrílico. Medido: el reflejo no es un espejo exacto (correlación baja), pero siempre está mucho más claro que el producto (+0,3 a +0,5). Se prueban dos líneas de apoyo por columna: el borde inferior del modelo general (que suele excluir el reflejo; solo si cubre ≥ 85 % del producto, así no se usa en placas con LEDs) y el punto medio de la máscara (si todos los modelos lo incluyen; exige "cintura" en V en esa línea). Se corta si lo de abajo está ≥ 0,15 más claro. Sin falsos positivos en productos simétricos (diodos, detector redondo, terminales).
 5. **Refinado de máscara** — componente principal + piezas cercanas (patas separadas por reflejos); huecos con piezas adentro se rellenan (`rellenar_placas`: placa blanca con LEDs que el modelo ve como anillo + LEDs sueltos; un hueco real —ojo de terminal, rollo de cable, marco— no tiene nada adentro y se respeta); eliminación de sombra de contacto; matting de bordes y decontaminación de color (sin halo blanco).
-6. **Mejora** — balance de blancos, exposición/contraste y nitidez suaves.
+6. **Mejora** — balance de blancos, exposición y nitidez suaves. El fondo blanco es la referencia: se neutraliza su tinte (máx. ±10 % por canal) y, si sale gris, se aclara hasta 1 + 0,5 × `contraste` (1,15 por defecto) con compresión de altas luces. No se toca nada si el fondo no es claro, parejo y casi neutro (fondo negro o de color, fotos con transparencia original). Enfoque final con máscara de enfoque ponderada por alfa (sin halo), a la mitad si hubo upscale con IA. Validado en las 963: 556 con referencia; tinte mediano 0, máximo 3 %; 16 fotos aclaradas.
 7. **Encuadre** — recorte al producto, escalado para que el lado mayor ocupe el 92 % del lienzo, centrado en 1080×1080 transparente.
 8. **Exportación** — PNG, 300 DPI, nombre según §6.2.
 9. **Control de calidad** — marca para revisión:
    - máscara casi vacía o que ocupa casi toda la imagen;
    - producto tocando el borde de la foto original (posible recorte);
-   - discrepancia grande entre la máscara del modelo y una máscara simple por umbral de blanco;
+   - ~~discrepancia grande entre la máscara del modelo y una máscara simple por umbral de blanco~~ — **descartado como aviso (F3)**: se mide (`discrepancia` = 1 − IoU, columna del reporte) pero de las 13 fotos con valor más alto, 12 eran productos blancos bien recortados que el umbral no ve y solo 1 tenía un problema real. Queda como dato informativo;
    - upscale necesario > 4x (foto de origen muy pobre);
    - varias piezas grandes separadas (¿más de un producto?, ¿captura de pantalla con interfaz?).
 
@@ -406,6 +406,9 @@ Ninguna bloqueante.
 
 ### Resultado F1 (2026-10-16)
 Fuente: `C:\Users\Usuario Ventas\Desktop\FOTOS PRODCUTOS` — 999 imágenes → **963 únicas** (8 copias exactas, 28 casi idénticas fusionadas), 88 con parecidas, 24 nombres genéricos, 315 ya transparentes, 0 errores. Unificar tarda ~75 s la primera vez.
+
+### Resultado F3 (2026-10-16)
+Segmentación combinada (dynamic ∪ DIS5K), relleno de placas, reflejos por foto, upscale conservative (x2/x4, fp16), mejora de color con el fondo como referencia y enfoque. Catálogo completo: **899 ok, 64 a revisar, 0 errores, 1,1 s/foto** (objetivo ≤ 3 s). Restauración sin modelo aparte y QC por umbral solo informativo (ver §9). Pendiente: prueba de impresión en las 4 medidas de card (§15) y set de referencia formal.
 
 ### Resultado F2 (2026-10-16)
 963 fotos procesadas en ~7,5 min (0,47 s/foto, RTX 3070 Ti): **898 ok, 64 a revisar, 1 error** (`Obsidian-background1`, un fondo sin producto). 308 usaron su transparencia original, 614 BiRefNet. En muestras al azar las patas finas, cables y fondos negros/grises salen bien y sin halo.

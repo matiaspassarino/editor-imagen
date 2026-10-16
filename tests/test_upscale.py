@@ -5,8 +5,8 @@ from editor_imagen.config import Salida
 from editor_imagen.steps import Contexto, frame, upscale
 
 
-def _falso_modelo(rgb):
-    return cv2.resize(rgb, (rgb.shape[1] * 4, rgb.shape[0] * 4), interpolation=cv2.INTER_NEAREST)
+def _falso_modelo(rgb, escala):
+    return cv2.resize(rgb, (rgb.shape[1] * escala, rgb.shape[0] * escala), interpolation=cv2.INTER_NEAREST)
 
 
 def _recorte():
@@ -18,23 +18,34 @@ def _recorte():
 
 
 def test_no_agranda_si_no_hace_falta(monkeypatch):
-    monkeypatch.setattr(upscale, "_modelo_por_bloques", lambda x: (_ for _ in ()).throw(AssertionError("no debía usarse")))
+    monkeypatch.setattr(upscale, "_modelo_por_bloques", lambda x, e: (_ for _ in ()).throw(AssertionError("no debía usarse")))
     rgb, alfa = _recorte()
     assert upscale.agrandar(rgb, alfa, 1.1, "conservative")[2] is False
     assert upscale.agrandar(rgb, alfa, 3.0, "off")[2] is False
 
 
-def test_conservador_x4_mantiene_color_y_borde(monkeypatch):
-    monkeypatch.setattr(upscale, "_modelo_por_bloques", _falso_modelo)
+def test_conservador_mantiene_color_y_borde(monkeypatch):
+    usadas = []
+    monkeypatch.setattr(upscale, "_modelo_por_bloques", lambda x, e: (usadas.append(e), _falso_modelo(x, e))[1])
     rgb, alfa = _recorte()
     r, a, usado = upscale.agrandar(rgb, alfa, 3.0, "conservative")
-    assert usado and r.shape == (200, 320, 3) and a.shape == (200, 320)
-    assert np.allclose(r[100, 160], [1, 0, 0], atol=0.02)  # el color no se mezcla con el gris de composición
-    assert a[0, 0] == 0 and a[100, 160] == 1
+    # x4 con la entrada reducida a 0,75: la salida queda ~ x3, lo que se necesita.
+    assert usado and usadas == [4] and r.shape == (152, 240, 3) and a.shape == (152, 240)
+    assert np.allclose(r[76, 120], [1, 0, 0], atol=0.02)  # el color no se mezcla con el gris de composición
+    assert a[0, 0] == 0 and a[76, 120] == 1
+
+
+def test_usa_x2_cuando_alcanza(monkeypatch):
+    usadas = []
+    monkeypatch.setattr(upscale, "_modelo_por_bloques", lambda x, e: (usadas.append(e), _falso_modelo(x, e))[1])
+    rgb, alfa = _recorte()
+    r, _, _ = upscale.agrandar(rgb, alfa, 1.5, "standard")
+    assert usadas == [2] and r.shape[:2] == (76, 120)  # 50×80 × 1,5
 
 
 def test_encuadre_con_upscale_da_el_tamano_final(monkeypatch):
     monkeypatch.setattr(upscale, "_modelo_por_bloques", _falso_modelo)
+
     rgb, alfa = _recorte()
     ctx = Contexto(rgb=rgb, alfa=alfa, resolucion_origen=(80, 50))
     out_rgb, out_a = frame.encuadrar(ctx, Salida(), "conservative")

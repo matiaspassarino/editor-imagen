@@ -19,7 +19,10 @@ from editor_imagen.steps import export, qc
 
 GUARDAR_CADA = 20  # imágenes; si el lote se corta, se pierde como mucho esto
 TERMINADOS = {"ok", "revisar"}
-COLUMNAS_REPORTE = ["id", "nombre", "salida", "estado", "tiempo_ms", "resolucion_origen", "upscale_factor", "segmentacion", "advertencias", "error"]
+COLUMNAS_REPORTE = [
+    "id", "nombre", "salida", "estado", "tiempo_ms", "resolucion_origen", "upscale_factor",
+    "segmentacion", "discrepancia", "advertencias", "error",
+]
 
 
 @dataclass
@@ -176,6 +179,7 @@ def _procesar_fila(fila: dict, nombres: list[str], idx: Indice, bib: Biblioteca,
             resolucion_origen="x".join(map(str, ctx.resolucion_origen)),
             upscale_factor=f"{ctx.factor_escala:.2f}",
             segmentacion=ctx.segmentacion,
+            discrepancia="" if ctx.discrepancia is None else f"{ctx.discrepancia:.3f}",
             advertencias=fila["advertencias"],
         )
     except Exception as e:  # noqa: BLE001 — una imagen fallida no frena el lote (O7)

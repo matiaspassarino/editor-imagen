@@ -182,7 +182,8 @@ def check(
         sondas = [
             ("BiRefNet dynamic", lambda r: _probe_birefnet(r, "birefnet-dynamic")),
             ("BiRefNet DIS5K", lambda r: _probe_birefnet(r, "birefnet-dis")),
-            ("Real-ESRGAN x4plus", _probe_upscaler),
+            ("Real-ESRGAN x2plus", lambda r: _probe_upscaler(r, "realesrgan-x2plus")),
+            ("Real-ESRGAN x4plus", lambda r: _probe_upscaler(r, "realesrgan-x4plus")),
         ]
         for name, fn in sondas:
             with console.status(f"Probando {name} (la primera vez descarga los pesos)…"):
@@ -222,11 +223,12 @@ def _probe_birefnet(registry, nombre: str) -> str:
     return f"{registry.device()}, {ms:.0f} ms a {entrada} px{_vram_peak()}"
 
 
-def _probe_upscaler(registry) -> str:
+def _probe_upscaler(registry, nombre: str) -> str:
     import torch
 
-    model = registry.upscaler()
-    x = torch.rand(1, 3, 256, 256, device=registry.device())
+    model = registry.upscaler(nombre)
+    dtype = next(model.model.parameters()).dtype
+    x = torch.rand(1, 3, 256, 256, device=registry.device(), dtype=dtype)
     with torch.inference_mode():
         t = time.perf_counter()
         out = model(x)

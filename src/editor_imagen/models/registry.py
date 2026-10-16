@@ -24,6 +24,10 @@ UPSCALERS = {
         "RealESRGAN_x4plus.pth",
         "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
     ),
+    "realesrgan-x2plus": (
+        "RealESRGAN_x2plus.pth",
+        "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+    ),
 }
 
 _cache: dict[str, object] = {}
@@ -67,5 +71,7 @@ def upscaler(name: str = "realesrgan-x4plus"):
 
         model = ModelLoader().load_from_file(download_upscaler(name))
         model.to(device()).eval()
+        if device() == "cuda" and model.supports_half:
+            model.half()
         _cache[key] = model
     return _cache[key]
