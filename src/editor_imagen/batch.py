@@ -8,9 +8,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import get_args
 
 from editor_imagen import pipeline
-from editor_imagen.config import Config
+from editor_imagen.config import Config, Proceso, Segmentacion
 from editor_imagen.library import inventory, naming
 from editor_imagen.library.biblioteca import Biblioteca
 from editor_imagen.library.unify import Indice
@@ -74,12 +75,11 @@ def procesar(
     inventory.verificar_escritura(bib.inventario)
     filas = inventory.cargar(bib.inventario)
     idx = Indice(bib.indice)
-    preset = pipeline.version_preset(cfg.proceso)
     salidas = asignar_salidas(filas)
     res = ResumenLote()
 
     elegidas = [f for f in filas if filtro(f)]
-    cola = [f for f in elegidas if forzar or not (f["estado"] in TERMINADOS and f["procesado_con"] == preset)]
+    cola = [f for f in elegidas if forzar or not (f["estado"] in TERMINADOS and f["procesado_con"] == _preset(cfg, f))]
     res.salteadas = len(elegidas) - len(cola)
     if limite is not None:
         cola = cola[:limite]
@@ -94,7 +94,7 @@ def procesar(
         for n, fila in enumerate(cola):
             if avance:
                 avance(n, len(cola), fila["nombre"])
-            rep.writerow(_procesar_fila(fila, salidas[fila["id"]], idx, bib, cfg, preset))
+            rep.writerow(_procesar_fila(fila, salidas[fila["id"]], idx, bib, cfg))
             frep.flush()
             res.por_estado[fila["estado"]] += 1
             if (n + 1) % GUARDAR_CADA == 0:
@@ -104,7 +104,26 @@ def procesar(
     return res
 
 
-def _procesar_fila(fila: dict, nombres: list[str], idx: Indice, bib: Biblioteca, cfg: Config, preset: str) -> dict:
+def _proceso(cfg: Config, fila: dict) -> Proceso:
+    """Ajustes para esta foto: los de config.yaml, con el modelo de la columna `modelo` si tiene uno."""
+    modelo = fila["modelo"].strip().lower()
+    if not modelo:
+        return cfg.proceso
+    validos = get_args(Segmentacion.model_fields["modelo"].annotation)
+    if modelo not in validos:
+        raise ValueError(f"modelo '{fila['modelo']}' no válido; opciones: {', '.join(validos)}")
+    seg = cfg.proceso.segmentacion.model_copy(update={"modelo": modelo})
+    return cfg.proceso.model_copy(update={"segmentacion": seg})
+
+
+def _preset(cfg: Config, fila: dict) -> str:
+    try:
+        return pipeline.version_preset(_proceso(cfg, fila))
+    except ValueError:
+        return ""  # modelo inválido: nunca coincide, así se intenta y queda el error en el inventario
+
+
+def _procesar_fila(fila: dict, nombres: list[str], idx: Indice, bib: Biblioteca, cfg: Config) -> dict:
     t0 = time.perf_counter()
     reg = {"id": fila["id"], "nombre": fila["nombre"], "salida": inventory.SEPARADOR_RUTAS.join(nombres)}
     try:
@@ -112,7 +131,9 @@ def _procesar_fila(fila: dict, nombres: list[str], idx: Indice, bib: Biblioteca,
         if grupo is None:
             raise FileNotFoundError("la foto no figura en el índice; correr `editor unificar`")
         origen = bib.originales / grupo["archivo"]
-        im, ctx = _con_reintento_gpu(lambda: pipeline.procesar(origen, cfg.proceso))
+        proceso = _proceso(cfg, fila)
+        preset = pipeline.version_preset(proceso)
+        im, ctx = _con_reintento_gpu(lambda: pipeline.procesar(origen, proceso))
 
         for archivo in nombres:
             export.guardar(im, bib.procesadas / archivo, cfg.proceso.salida.dpi)

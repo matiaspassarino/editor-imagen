@@ -24,12 +24,13 @@ COLUMNAS = [
     "parecidas",
     "nombre_generico",
     "estado",
+    "modelo",
     "procesado_con",
     "salida",
     "advertencias",
 ]
 # Campos que no se recalculan al re-ejecutar `unificar`.
-CONSERVADOS = ["codigo", "descripcion", "estado", "procesado_con", "salida", "advertencias"]
+CONSERVADOS = ["codigo", "descripcion", "estado", "modelo", "procesado_con", "salida", "advertencias"]
 SEPARADOR_RUTAS = " | "
 
 

@@ -10,9 +10,13 @@ MODELS_DIR = PROJECT_ROOT / "models"
 os.environ.setdefault("HF_HOME", str(MODELS_DIR / "hf"))
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
-BIREFNET_REPO = "ZhengPeng7/BiRefNet"  # MIT
-# El modelo trae código propio (trust_remote_code): se fija la revisión para no ejecutar versiones nuevas sin revisar.
-BIREFNET_REVISION = "e2bf8e4460fc8fa32bba5ea4d94b3233d367b0e4"
+# Variantes de BiRefNet (todas MIT): nombre → (repo, revisión, resolución de entrada).
+# Traen código propio (trust_remote_code): se fija la revisión para no ejecutar versiones nuevas sin revisar.
+BIREFNET = {
+    "birefnet": ("ZhengPeng7/BiRefNet", "e2bf8e4460fc8fa32bba5ea4d94b3233d367b0e4", 1024),
+    "birefnet-dynamic": ("ZhengPeng7/BiRefNet_dynamic", "280306042f57b7a33854319da62fd86aaa89ec4c", 1536),
+    "birefnet-dis": ("ZhengPeng7/BiRefNet-DIS5K", "343602b3219a0e905a86c5012935d5a4a0882390", 1024),
+}
 
 UPSCALERS = {
     # nombre: (archivo, url) — Real-ESRGAN, BSD-3
@@ -42,19 +46,18 @@ def download_upscaler(name: str) -> Path:
     return dest
 
 
-def birefnet():
-    if "birefnet" not in _cache:
-        import torch
+def birefnet(nombre: str = "birefnet"):
+    """Devuelve (modelo, resolución de entrada)."""
+    if nombre not in _cache:
         from transformers import AutoModelForImageSegmentation
 
-        model = AutoModelForImageSegmentation.from_pretrained(
-            BIREFNET_REPO, revision=BIREFNET_REVISION, trust_remote_code=True
-        )
+        repo, revision, _ = BIREFNET[nombre]
+        model = AutoModelForImageSegmentation.from_pretrained(repo, revision=revision, trust_remote_code=True)
         model.to(device()).eval()
         if device() == "cuda":
             model.half()
-        _cache["birefnet"] = model
-    return _cache["birefnet"]
+        _cache[nombre] = model
+    return _cache[nombre], BIREFNET[nombre][2]
 
 
 def upscaler(name: str = "realesrgan-x4plus"):

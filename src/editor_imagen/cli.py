@@ -179,7 +179,12 @@ def check(
     if not sin_modelos:
         from editor_imagen.models import registry
 
-        for name, fn in (("BiRefNet", _probe_birefnet), ("Real-ESRGAN x4plus", _probe_upscaler)):
+        sondas = [
+            ("BiRefNet dynamic", lambda r: _probe_birefnet(r, "birefnet-dynamic")),
+            ("BiRefNet DIS5K", lambda r: _probe_birefnet(r, "birefnet-dis")),
+            ("Real-ESRGAN x4plus", _probe_upscaler),
+        ]
+        for name, fn in sondas:
             with console.status(f"Probando {name} (la primera vez descarga los pesos)…"):
                 try:
                     detail = fn(registry)
@@ -201,12 +206,12 @@ def _vram_peak() -> str:
     return f", VRAM pico {peak:.2f} GB"
 
 
-def _probe_birefnet(registry) -> str:
+def _probe_birefnet(registry, nombre: str) -> str:
     import torch
 
-    model = registry.birefnet()
+    model, entrada = registry.birefnet(nombre)
     dtype = next(model.parameters()).dtype
-    x = torch.rand(1, 3, 1024, 1024, device=registry.device(), dtype=dtype)
+    x = torch.rand(1, 3, entrada, entrada, device=registry.device(), dtype=dtype)
     with torch.inference_mode():
         model(x)  # calentamiento
         t = time.perf_counter()
@@ -214,7 +219,7 @@ def _probe_birefnet(registry) -> str:
         if x.is_cuda:
             torch.cuda.synchronize()
     ms = (time.perf_counter() - t) * 1000
-    return f"{registry.device()}, salida {tuple(out.shape[-2:])}, {ms:.0f} ms a 1024 px{_vram_peak()}"
+    return f"{registry.device()}, {ms:.0f} ms a {entrada} px{_vram_peak()}"
 
 
 def _probe_upscaler(registry) -> str:

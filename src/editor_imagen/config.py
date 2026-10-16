@@ -15,7 +15,7 @@ class Dedup(BaseModel):
 
 
 class Segmentacion(BaseModel):
-    modelo: Literal["birefnet", "rembg-isnet"] = "birefnet"
+    modelo: Literal["combinado", "birefnet", "birefnet-dynamic", "birefnet-dis", "rembg-isnet"] = "combinado"
     usar_transparencia_existente: bool = True
     quitar_sombra: bool = True
     refinar_bordes: bool = True

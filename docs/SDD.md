@@ -141,6 +141,7 @@ No se intenta adivinar el código desde el nombre: los nombres reales son demasi
 | `parecidas` | Nombres de otras filas casi idénticas que no se fusionaron (variantes, misma foto para otro código) |
 | `nombre_generico` | sí/no |
 | `estado` | pendiente / ok / revisar / error |
+| `modelo` | Editable. Vacío = el de `config.yaml`. Para una foto puntual: `birefnet`, `birefnet-dynamic`, `birefnet-dis` o `combinado`; al cambiarlo, la foto se reprocesa sola |
 | `procesado_con` | Versión del preset usada (programa + hash de los ajustes de `proceso`; si cambian, la foto vuelve a procesarse) |
 | `salida` | Archivos generados en `procesadas/` (uno por código). Si cambia el código, la salida anterior se borra |
 | `advertencias` | Resultado del control de calidad |
@@ -201,6 +202,16 @@ Carga → Restauración → Upscale (si hace falta) → Segmentación → Refina
 2. **Restauración** — artefactos JPEG y ruido, antes de agrandar.
 3. **Upscale (condicional)** — si el producto recortado no llega a ~1040 px de lado mayor (1080 menos el margen). Modo `conservative` por defecto.
 4. **Segmentación** — máscara alfa. Se trabaja a mayor resolución que la salida para captar mejor las patas finas. Si la foto ya trae transparencia confiable (no es un rectángulo blanco con esquinas transparentes), se usa esa (`usar_transparencia_existente`).
+   **4.1 Elección del modelo (2026-10-16).** Con 8 fotos reportadas (carcasas blancas, placas blancas con LEDs, reflejos, blísters) se compararon 4 variantes:
+
+   | Variante | Resuelve | Falla |
+   |---|---|---|
+   | BiRefNet @1024 (F2) | — | las 8 |
+   | BiRefNet_HR @2048 | textos, blíster | placas blancas; 713 ms, 5 GB VRAM |
+   | BiRefNet_dynamic @1536 | carcasas blancas, reflejos, textos | placas blancas (solo ve los LEDs) |
+   | BiRefNet-DIS5K @1024 | placas blancas, marcos | huecos en zonas con texto |
+
+   La **unión** dynamic ∪ DIS5K corrigió 8/8 y en 32 fotos al azar empeoró 1 (sumó el reflejo del producto en la mesa, lo aporta dynamic). Limitar los agregados de DIS5K a la envolvente del producto se probó y se descartó: recorta el borde de las placas. Para los casos puntuales está la columna `modelo` del inventario. Costo: ~0,45 s de GPU por foto, ~3 GB VRAM.
 5. **Refinado de máscara** — componente principal + piezas cercanas (patas separadas por reflejos); eliminación de sombra de contacto; matting de bordes y decontaminación de color (sin halo blanco).
 6. **Mejora** — balance de blancos, exposición/contraste y nitidez suaves.
 7. **Encuadre** — recorte al producto, escalado para que el lado mayor ocupe el 92 % del lienzo, centrado en 1080×1080 transparente.
@@ -241,7 +252,7 @@ Principios:
 |---|---|---|
 | Lenguaje | Python 3.12 (venv dedicado) | Mejor soporte de PyTorch/CUDA que la 3.14 instalada |
 | Gestor de entorno | `uv` | Instalación rápida y reproducible |
-| Segmentación (principal) | **BiRefNet** (MIT) | Mejor opción abierta para estructuras finas |
+| Segmentación (principal) | **BiRefNet** (MIT), modo `combinado`: unión de `BiRefNet_dynamic` @1536 y `BiRefNet-DIS5K` @1024 | Ver §9.4.1 |
 | Segmentación (alternativa) | **rembg** (isnet-general-use) | Más rápida para productos simples |
 | Restauración / upscale | **Real-ESRGAN** (BSD-3) + otros modelos vía **spandrel** (MIT) | Cambiar de modelo sin cambiar código; el definitivo se elige comparando en el set de referencia |
 | Procesamiento clásico | OpenCV, Pillow, NumPy | Color, máscaras, composición |

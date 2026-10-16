@@ -107,6 +107,17 @@ def test_procesar_de_punta_a_punta_y_reanudar(tmp_path):
     assert not salida.exists()
 
 
+def test_columna_modelo_cambia_el_preset_y_valida(tmp_path):
+    fila = {"modelo": ""}
+    cfg = Config(biblioteca=tmp_path)
+    base = batch._preset(cfg, fila)
+    assert batch._preset(cfg, {"modelo": "birefnet"}) != base
+    assert batch._preset(cfg, {"modelo": " BiRefNet "}) == batch._preset(cfg, {"modelo": "birefnet"})
+    assert batch._preset(cfg, {"modelo": "cualquiera"}) == ""
+    assert batch._proceso(cfg, {"modelo": "birefnet-dis"}).segmentacion.modelo == "birefnet-dis"
+    assert cfg.proceso.segmentacion.modelo == "combinado"  # no modifica la configuración global
+
+
 def test_error_en_una_imagen_no_frena_el_lote(tmp_path):
     fuente = tmp_path / "FOTOS"
     producto_transparente(fuente / "bien.png")
