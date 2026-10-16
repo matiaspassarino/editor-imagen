@@ -225,7 +225,25 @@ Evitá superficies brillantes (vidrio, acrílico): generan reflejos.
 
 ---
 
-## 10. Problemas frecuentes
+## 10. Prueba de impresión
+
+Genera un PDF A4 apaisado con productos en las 4 áreas de imagen de la card (41×22, 43×55, 45×45 y 83×55 mm) a tamaño real, con instrucciones y una regla de 100 mm para controlar la escala:
+
+```
+uv run --with reportlab python scripts/prueba_impresion.py
+```
+
+Sin nombres usa 12 casos difíciles. Para elegir otros productos, agregá sus nombres (columna `nombre` del inventario):
+
+```
+uv run --with reportlab python scripts/prueba_impresion.py 3280 in02 "CAPACITORES MOTOR AC CBB60"
+```
+
+El PDF queda en `C:\imagenes editadas\reportes\prueba_impresion_<fecha>.pdf`. Imprimilo al **100 %** (sin "ajustar a la página").
+
+---
+
+## 11. Problemas frecuentes
 
 | Problema | Solución |
 |---|---|
@@ -238,7 +256,7 @@ Evitá superficies brillantes (vidrio, acrílico): generan reflejos.
 
 ---
 
-## 11. Instalar en otra PC
+## 12. Instalar en otra PC
 
 Requisitos: Windows 10/11, placa NVIDIA (recomendado), ~5 GB libres, conexión a internet para la instalación.
 
